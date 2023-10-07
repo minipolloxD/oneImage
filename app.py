@@ -1,5 +1,6 @@
 #USAGE: getRandomFileBytes("./static/images/")
 import os
+import dataclasses
 from random import randint as rand
 
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -10,10 +11,31 @@ def getRandomFilepath(folder: str):
     files = os.listdir(folder)
     return folder + files[rand(0, len(files)-1)]
 
-def getRandomFileBytes(path: str):
-    return open(getRandomFilepath(path), "r+b").read()
+class fileMeta:
+    filename : str = ""
+    extension : str = ""
+    bytes : bytes = None
 
+    def getMIME(self):
+        match self.extension:
+            case "png":
+                return "image/png"
+            case "jpg":
+                return "image/jpeg"
+            case "jpeg":
+                return "image/jpeg"
+            case "gif":
+                return "image/gif"
+            case "webm":
+                return "video/webm"
 
+    def __init__(self, filepath : str):
+        self.filename = filepath.split("/")[-1]
+        self.extension = filepath.split(".")[-1]
+        self.bytes = open(filepath, "r+b").read()
+
+def getRandomFile() -> fileMeta:
+    return fileMeta(getRandomFilepath)
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(
@@ -22,6 +44,9 @@ app.wsgi_app = ProxyFix(
 
 @app.route("/")
 def index():
-   response = make_response(getRandomFileBytes("./static/"))
-   response.headers.set("Content-Type","image/png")
+   file = getRandomFile()
+   
+   response = make_response(file.bytes)
+   response.headers.set("Content-Type", file.getMIME())
+   
    return response
